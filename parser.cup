@@ -1,0 +1,128 @@
+/**
+ *  Package and Import Specifications
+ */
+import java_cup.runtime.*;
+
+/**
+ *  Usercode Components
+ */
+parser code {:
+    // Connect this parser to a scanner!
+    Scanner s;
+    Parser(Scanner s){ this.s=s; }
+:}
+
+/* define how to connect to the scanner! */
+scan with {: return s.next_token(); :};
+
+/**
+ *  Symbol Lists
+ */
+
+/* Terminals (tokens returned by the scanner). */
+terminal            COMMA, LBRACK, RBRACK, LPAREN, RPAREN, ELSE, REVERSE, PREFIX, CONCAT, NOARG, IFPAREN;
+terminal String     STRING_LITERAL, IDENTIFIER;
+
+/*  Non terminals */
+non terminal program;
+non terminal String funcDefinitions, funcDefinition, funcCall, args, arg2, passed_args, passed_arg2;
+non terminal String condition, reverse, prefix, concat, expr, if_arg, conditionBody, funcCallsBody;
+
+
+
+/**
+ *  Precedence Declarations
+ */
+ precedence left LPAREN, RPAREN, IDENTIFIER, RBRACK, LBRACK, NOARG, COMMA, CONCAT;
+/**
+ *  The Grammar Rules
+ */
+
+program ::=	funcDefinitions:e1 funcCallsBody:e2                                     {: System.out.println("public class Main {\n\tpublic static void main(String[] args) {\n\t" + e2 + "\n\t}"+e1   +"\n}"); :};
+
+//######################################FUNCTIONS########################################
+funcCallsBody::= funcCall:e1 funcCallsBody:e2                                   {: RESULT = "\t\tSystem.out.println(" + e1+");"+"\n\t" + e2; :}
+              |funcCall:e1                                                      {: RESULT = "\t\tSystem.out.println(" + e1+");"+"\n"; :};
+funcCall ::= IDENTIFIER:e1 NOARG                                                {: RESULT = e1 + '(' + ')'; :}
+             |IDENTIFIER:e1 LPAREN passed_args:e2 RPAREN                        {: RESULT = e1 + '(' +e2+ ')'; :}
+             |IDENTIFIER:e1 LPAREN IDENTIFIER:e2 RPAREN                         {: RESULT = e1 + '(' +e2+ ')'; :};
+
+funcDefinitions ::= funcDefinitions:e1 funcDefinition:e2                        {: RESULT = e1 + "\n" + e2; :}
+                    |                                                           {: RESULT = ""; :};
+funcDefinition ::=  IDENTIFIER:e1 NOARG LBRACK expr:e3 RBRACK                   {: RESULT = "\tpublic static String " + e1 + '('+ ") {\n\t\t return " + e3 +";\n\t}"; :}
+                    |IDENTIFIER:e1 LPAREN args:e2 RPAREN LBRACK expr:e3 RBRACK  {: RESULT = "\tpublic static String " + e1 + '('+e2+ ") {\n\t\t return " + e3 +";\n\t}"; :};
+//########################################ARGS##############################################
+passed_args::=expr:e1                                                           {: RESULT = e1; :}
+           |expr:e1 passed_arg2:e2                                              {: RESULT = e1+ e2;:};
+passed_arg2::= COMMA passed_args:e1                                             {: RESULT =", "+ e1; :};
+
+
+args::=IDENTIFIER:e1                                                            {: RESULT = e1; :}
+      |IDENTIFIER:e1 arg2:e2                                                    {: RESULT = e1+ e2;:};
+arg2::= COMMA args:e1                                                           {: RESULT =", "+ e1; :};
+
+//######################################OPS###################################################
+
+concat ::= IDENTIFIER:e1 CONCAT IDENTIFIER:e2                                   {: RESULT = e1 + " + " + e2; :}
+        | IDENTIFIER:e1 CONCAT concat:e2                                        {: RESULT = e1 + " + " + e2; :};
+
+
+prefix ::= expr:e1 PREFIX expr:e2                                               {: RESULT = "(" + e2 + ").startsWith(" + e1 + ")"; :}
+        |IDENTIFIER:e1 PREFIX expr:e2                                           {: RESULT = "(" + e2 + ").startsWith(" + e1 + ")"; :}
+        |IDENTIFIER:e1 PREFIX IDENTIFIER:e2                                     {: RESULT = "(" + e2 + ").startsWith(" + e1 + ")"; :}
+        |expr:e1 PREFIX IDENTIFIER:e2                                           {: RESULT = "(" + e2 + ").startsWith(" + e1 + ")"; :};
+
+reverse ::= REVERSE IDENTIFIER:e1                                               {: RESULT = "new StringBuilder(" + e1 + ").reverse().toString()"; :}
+          |REVERSE STRING_LITERAL:e1                                            {: RESULT = "new StringBuilder(" + e1 + ").reverse().toString()"; :};
+//######################################IF_ELSE###################################################
+
+condition ::= IFPAREN if_arg:e1 RPAREN conditionBody:e2 ELSE conditionBody:e3   {: RESULT = "(" + e1 + " ? " + e2 + " : " + e3 + ")"; :};
+
+if_arg ::= expr:e1                                                              {: RESULT = e1; :}
+        |prefix:e1                                                              {: RESULT = e1; :};
+
+conditionBody ::= IDENTIFIER:e                                                  {: RESULT = e; :}
+               | funcCall:e                                                     {: RESULT = e; :}
+               | condition:e                                                    {: RESULT = e; :}
+               | STRING_LITERAL:e                                               {: RESULT = e; :};
+//######################################EXPRS###################################################
+expr ::= STRING_LITERAL:e                                                       {: RESULT = '"' + e + '"'; :}
+        | funcCall:e                                                            {: RESULT = e; :}
+        | condition:e                                                           {: RESULT = e; :}
+        | reverse:e                                                             {: RESULT = e; :}
+        | concat:e                                                              {: RESULT = e; :};
+
+
+
+
+/*
+program ::=	funcDefinitions:e1 funcCalls:e2                                   {: System.out.println("public class Main {\n\tpublic static void main(String[] args) {\n\t" + e2 + "\n\t}"  + e1 +"\n}"); :};
+funcDefinitions ::= funcDefinitions:e1 funcDefinition:e2                      {: RESULT = e1 + "\n" + e2; :}
+                    |                                                         {: RESULT = ""; :};
+funcDefinition ::=  IDENTIFIER:e1 LPAREN args:e2 RPAREN LBRACK expr:e3 RBRACK {: RESULT = "\tpublic static String " + e1 + '(' + e2 + ") {\n\t\t return " + e3 +"\n\t}"; :};
+funcCalls ::= funcCalls:e1 funcCall:e2                                        {: RESULT = e1 + "\n" + e2; :}
+             |                                                                {: RESULT = ""; :};
+funcCall ::= IDENTIFIER:e1 LPAREN passed_args:e2 RPAREN                       {: RESULT = "\t\tSystem.out.println(" + e1 + '(' + e2 + ')' + ")"; :};
+args ::= arg:e1 arg2:e2                                                       {: RESULT = e1 + "" + e2; :};
+arg ::= IDENTIFIER:e1                                                         {: RESULT = "String " + e1; :}
+        |                                                                     {: RESULT = ""; :};
+arg2 ::= COMMA arg:e1 arg2:e2                                                 {: RESULT = ", " + e1 + e2; :}
+        |                                                                     {: RESULT = ""; :};
+passed_args ::= passed_arg:e1 passed_arg2:e2                                  {: RESULT = e1 + "" + e2; :};
+passed_arg ::= expr:e1                                                        {: RESULT = e1; :}
+        |                                                                     {: RESULT = ""; :};
+passed_arg2 ::= COMMA passed_arg:e1 passed_arg2:e2                            {: RESULT = ", " + e1 + e2; :}
+        |                                                                     {: RESULT = ""; :};
+condition ::= IF LPAREN if_arg:e1 RPAREN expr:e2 ELSE expr:e3                 {: RESULT = "(" + e1 + " ? " + e2 + " : " + e3 + ")"; :};
+if_arg ::= expr:e1                                                            {: RESULT = e1; :}
+        | prefix:e2                                                           {: RESULT = e2; :};
+reverse ::= REVERSE expr:e1                                                   {: RESULT = "new StringBuilder(" + e1 + ").reverse().toString()"; :};
+prefix ::= expr:e1 PREFIX expr:e2                                             {: RESULT = "(" + e2 + ").startsWith(" + e1 + ")"; :};
+concat ::= expr:e1 CONCAT expr:e2                                             {: RESULT = e1 + " + " + e2; :};
+expr ::= condition:e                                                          {: RESULT = e; :}
+        | STRING_LITERAL:e                                                    {: RESULT = '"' + e + '"'; :}
+        | funcCall:e                                                          {: RESULT = e; :}
+        | IDENTIFIER:e                                                        {: RESULT = e; :}
+        | reverse:e                                                           {: RESULT = e; :}
+        | concat:e                                                            {: RESULT = e; :};
+        */
