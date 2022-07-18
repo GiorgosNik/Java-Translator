@@ -15,5 +15,8 @@ Examples of this language can be found under the input folder
 
 ### Running the program
 To create the lexer and parser, use the included MAKEFILE
-- To create the lexer and parser, use the "make" command
-- To translate a pseudo-program to java, use make execute and redirect the program to the input eg. make execute < ./input/example1
+- To create the lexer and parser, use `make`
+- To translate a pseudo-program to java, use make execute and redirect the program to the input:
+```
+make execute < ./input/example1
+```
